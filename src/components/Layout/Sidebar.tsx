@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut,
   Zap,
-  UserPlus
+  UserPlus,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Registrations', href: '/admin/registrations', icon: UserPlus },
   { name: 'Query History', href: '/admin/queries', icon: Search },
   { name: 'Credits & Billing', href: '/admin/credits', icon: CreditCard },
+  { name: 'Rate Plans', href: '/admin/rate-plans', icon: DollarSign },
   { name: 'API Management', href: '/admin/apis', icon: Key },
   { name: 'Live Requests', href: '/admin/live', icon: Activity },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

@@ -17,6 +17,7 @@ import { Credits } from './pages/Credits';
 import { APIManagement } from './pages/APIManagement';
 import { LiveRequests } from './pages/LiveRequests';
 import { Settings } from './pages/Settings';
+import { RatePlans } from './pages/RatePlans';
 import { OfficerLogin } from './pages/OfficerLogin';
 import { OfficerDashboard } from './pages/OfficerDashboard';
 
@@ -75,6 +76,13 @@ const AppContent: React.FC = () => {
           <ProtectedRoute>
             <Layout>
               <Credits />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/rate-plans" element={
+          <ProtectedRoute>
+            <Layout>
+              <RatePlans />
             </Layout>
           </ProtectedRoute>
         } />
