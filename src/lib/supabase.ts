@@ -66,7 +66,7 @@ export interface CreditTransaction {
 export interface APIKey {
   id: string;
   name: string;
-  provider: string;
+  api_id: string;
   api_key: string;
   status: 'Active' | 'Inactive';
   usage_count: number;

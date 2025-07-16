@@ -27,7 +27,7 @@ export const APIManagement: React.FC = () => {
 
   const [keyFormData, setKeyFormData] = useState({
     name: '',
-    provider: '',
+    api_id: '',
     api_key: '',
     status: 'Active' as 'Active' | 'Inactive'
   });
@@ -103,7 +103,7 @@ export const APIManagement: React.FC = () => {
   const handleAddAPIKey = () => {
     setKeyFormData({
       name: '',
-      provider: '',
+      api_id: '',
       api_key: '',
       status: 'Active'
     });
@@ -114,7 +114,7 @@ export const APIManagement: React.FC = () => {
   const handleEditAPIKey = (apiKey: any) => {
     setKeyFormData({
       name: apiKey.name,
-      provider: apiKey.provider,
+      api_id: apiKey.api_id,
       api_key: apiKey.api_key,
       status: apiKey.status
     });
@@ -136,7 +136,7 @@ export const APIManagement: React.FC = () => {
       setShowAddKeyModal(false);
       setKeyFormData({
         name: '',
-        provider: '',
+        api_id: '',
         api_key: '',
         status: 'Active'
       });
@@ -165,8 +165,12 @@ export const APIManagement: React.FC = () => {
 
   const filteredAPIKeys = apiKeys.filter(apiKey => 
     apiKey.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    apiKey.provider.toLowerCase().includes(searchTerm.toLowerCase())
+    getAPIName(apiKey.api_id).toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getAPIName = (apiId: string) => {
+    return apis.find(api => api.id === apiId)?.name || 'Unknown API';
+  };
 
   const maskAPIKey = (key: string) => {
     const visiblePart = key.substring(0, 8);
@@ -425,7 +429,7 @@ export const APIManagement: React.FC = () => {
                       {apiKey.name}
                     </h3>
                     <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {apiKey.provider}
+                      {getAPIName(apiKey.api_id)}
                     </p>
                   </div>
                 </div>
@@ -735,23 +739,24 @@ export const APIManagement: React.FC = () => {
                 <label className={`block text-sm font-medium mb-2 ${
                   isDark ? 'text-gray-300' : 'text-gray-700'
                 }`}>
-                  Provider
+                  Select API Service *
                 </label>
                 <select
-                  value={keyFormData.provider}
-                  onChange={(e) => setKeyFormData(prev => ({ ...prev, provider: e.target.value }))}
+                  required
+                  value={keyFormData.api_id}
+                  onChange={(e) => setKeyFormData(prev => ({ ...prev, api_id: e.target.value }))}
                   className={`w-full px-3 py-2 border border-cyber-teal/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyber-teal ${
                     isDark 
                       ? 'bg-crisp-black text-white' 
                       : 'bg-white text-gray-900'
                   }`}
                 >
-                  <option value="">Select Provider</option>
-                  <option value="Signzy">Signzy</option>
-                  <option value="Surepass">Surepass</option>
-                  <option value="TrueCaller">TrueCaller</option>
-                  <option value="EmailValidator">EmailValidator</option>
-                  <option value="Custom">Custom Provider</option>
+                  <option value="">Select API Service</option>
+                  {apis.map(api => (
+                    <option key={api.id} value={api.id}>
+                      {api.name} ({api.type})
+                    </option>
+                  ))}
                 </select>
               </div>
 
