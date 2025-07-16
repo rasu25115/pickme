@@ -267,10 +267,7 @@ export const useSupabaseData = () => {
     try {
       const { data, error } = await supabase
         .from('api_keys')
-        .insert([{
-          ...apiKeyData,
-          usage_count: 0
-        }])
+        .insert([apiKeyData])
         .select()
         .single();
 
