@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, Officer, CreditTransaction, APIKey, Query, OfficerRegistration, LiveRequest } from '../lib/supabase';
+import { supabase, Officer, CreditTransaction, APIKey, Query, OfficerRegistration, LiveRequest, API, RatePlan, PlanAPI } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export const useSupabaseData = () => {
@@ -9,6 +9,9 @@ export const useSupabaseData = () => {
   const [queries, setQueries] = useState<Query[]>([]);
   const [registrations, setRegistrations] = useState<OfficerRegistration[]>([]);
   const [liveRequests, setLiveRequests] = useState<LiveRequest[]>([]);
+  const [apis, setAPIs] = useState<API[]>([]);
+  const [ratePlans, setRatePlans] = useState<RatePlan[]>([]);
+  const [planAPIs, setPlanAPIs] = useState<PlanAPI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
 
@@ -22,7 +25,10 @@ export const useSupabaseData = () => {
         loadAPIKeys(),
         loadQueries(),
         loadRegistrations(),
-        loadLiveRequests()
+        loadLiveRequests(),
+        loadAPIs(),
+        loadRatePlans(),
+        loadPlanAPIs()
       ]);
       calculateDashboardStats();
     } catch (error) {
@@ -93,6 +99,35 @@ export const useSupabaseData = () => {
     
     if (error) throw error;
     setLiveRequests(data || []);
+  };
+
+  const loadAPIs = async () => {
+    const { data, error } = await supabase
+      .from('apis')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    setAPIs(data || []);
+  };
+
+  const loadRatePlans = async () => {
+    const { data, error } = await supabase
+      .from('rate_plans')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    setRatePlans(data || []);
+  };
+
+  const loadPlanAPIs = async () => {
+    const { data, error } = await supabase
+      .from('plan_apis')
+      .select('*');
+    
+    if (error) throw error;
+    setPlanAPIs(data || []);
   };
 
   const calculateDashboardStats = () => {
@@ -326,6 +361,160 @@ export const useSupabaseData = () => {
     }
   };
 
+  // Rate Plan Management
+  const addRatePlan = async (planData: Omit<RatePlan, 'id' | 'created_at' | 'updated_at'>, apiSettings: any[]) => {
+    try {
+      // Create the rate plan
+      const { data: plan, error: planError } = await supabase
+        .from('rate_plans')
+        .insert([planData])
+        .select()
+        .single();
+
+      if (planError) throw planError;
+
+      // Create plan-API relationships
+      if (apiSettings.length > 0) {
+        const planAPIData = apiSettings.map(api => ({
+          plan_id: plan.id,
+          api_id: api.api_id,
+          enabled: api.enabled,
+          credit_cost: api.credit_cost,
+          buy_price: api.buy_price,
+          sell_price: api.sell_price
+        }));
+
+        const { error: planAPIError } = await supabase
+          .from('plan_apis')
+          .insert(planAPIData);
+
+        if (planAPIError) throw planAPIError;
+      }
+
+      await Promise.all([loadRatePlans(), loadPlanAPIs()]);
+      toast.success('Rate plan created successfully!');
+      return plan;
+    } catch (error: any) {
+      toast.error(`Failed to create rate plan: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const updateRatePlan = async (id: string, updates: Partial<RatePlan>, apiSettings?: any[]) => {
+    try {
+      const { error: planError } = await supabase
+        .from('rate_plans')
+        .update(updates)
+        .eq('id', id);
+
+      if (planError) throw planError;
+
+      // Update API settings if provided
+      if (apiSettings) {
+        // Delete existing plan-API relationships
+        await supabase
+          .from('plan_apis')
+          .delete()
+          .eq('plan_id', id);
+
+        // Insert new relationships
+        if (apiSettings.length > 0) {
+          const planAPIData = apiSettings.map(api => ({
+            plan_id: id,
+            api_id: api.api_id,
+            enabled: api.enabled,
+            credit_cost: api.credit_cost,
+            buy_price: api.buy_price,
+            sell_price: api.sell_price
+          }));
+
+          const { error: planAPIError } = await supabase
+            .from('plan_apis')
+            .insert(planAPIData);
+
+          if (planAPIError) throw planAPIError;
+        }
+      }
+
+      await Promise.all([loadRatePlans(), loadPlanAPIs()]);
+      toast.success('Rate plan updated successfully!');
+    } catch (error: any) {
+      toast.error(`Failed to update rate plan: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const deleteRatePlan = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('rate_plans')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      await Promise.all([loadRatePlans(), loadPlanAPIs()]);
+      toast.success('Rate plan deleted successfully!');
+    } catch (error: any) {
+      toast.error(`Failed to delete rate plan: ${error.message}`);
+      throw error;
+    }
+  };
+
+  // API Management
+  const addAPI = async (apiData: Omit<API, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('apis')
+        .insert([apiData])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      await loadAPIs();
+      toast.success('API added successfully!');
+      return data;
+    } catch (error: any) {
+      toast.error(`Failed to add API: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const updateAPI = async (id: string, updates: Partial<API>) => {
+    try {
+      const { error } = await supabase
+        .from('apis')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      await loadAPIs();
+      toast.success('API updated successfully!');
+    } catch (error: any) {
+      toast.error(`Failed to update API: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const deleteAPI = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('apis')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      await loadAPIs();
+      toast.success('API deleted successfully!');
+    } catch (error: any) {
+      toast.error(`Failed to delete API: ${error.message}`);
+      throw error;
+    }
+  };
+
   // Initialize data on mount
   useEffect(() => {
     loadData();
@@ -346,6 +535,9 @@ export const useSupabaseData = () => {
     queries,
     registrations,
     liveRequests,
+    apis,
+    ratePlans,
+    planAPIs,
     dashboardStats,
     isLoading,
     
@@ -359,6 +551,12 @@ export const useSupabaseData = () => {
     updateAPIKey,
     deleteAPIKey,
     updateRegistration,
+    addRatePlan,
+    updateRatePlan,
+    deleteRatePlan,
+    addAPI,
+    updateAPI,
+    deleteAPI,
     
     // Setters for local updates
     setOfficers,
@@ -366,6 +564,9 @@ export const useSupabaseData = () => {
     setAPIKeys,
     setQueries,
     setRegistrations,
-    setLiveRequests
+    setLiveRequests,
+    setAPIs,
+    setRatePlans,
+    setPlanAPIs
   };
 };

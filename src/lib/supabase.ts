@@ -118,3 +118,40 @@ export interface LiveRequest {
   created_at: string;
   completed_at?: string;
 }
+
+export interface API {
+  id: string;
+  name: string;
+  type: 'FREE' | 'PRO' | 'DISABLED';
+  global_buy_price: number;
+  global_sell_price: number;
+  default_credit_charge: number;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RatePlan {
+  id: string;
+  plan_name: string;
+  user_type: 'Police' | 'Private' | 'Custom';
+  monthly_fee: number;
+  default_credits: number;
+  renewal_required: boolean;
+  topup_allowed: boolean;
+  status: 'Active' | 'Inactive';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanAPI {
+  id: string;
+  plan_id: string;
+  api_id: string;
+  enabled: boolean;
+  credit_cost: number;
+  buy_price: number;
+  sell_price: number;
+  created_at: string;
+  updated_at: string;
+}

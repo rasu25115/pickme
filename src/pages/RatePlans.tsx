@@ -1,131 +1,31 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Settings, DollarSign, Users, Key, X, Save, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 import toast from 'react-hot-toast';
 
-interface API {
-  id: string;
-  name: string;
-  type: 'FREE' | 'PRO' | 'DISABLED';
-  global_buy_price: number;
-  global_sell_price: number;
-  default_credit_charge: number;
-  description: string;
-}
-
-interface PlanAPI {
-  api_id: string;
-  enabled: boolean;
-  credit_cost: number;
-  buy_price: number;
-  sell_price: number;
-}
-
-interface RatePlan {
-  id: string;
-  plan_name: string;
-  user_type: 'Police' | 'Private' | 'Custom';
-  monthly_fee: number;
-  default_credits: number;
-  renewal_required: boolean;
-  topup_allowed: boolean;
-  apis: PlanAPI[];
-  created_at: string;
-  status: 'Active' | 'Inactive';
-}
+import { API, RatePlan, PlanAPI } from '../lib/supabase';
 
 export const RatePlans: React.FC = () => {
   const { isDark } = useTheme();
+  const { 
+    apis, 
+    ratePlans, 
+    planAPIs, 
+    isLoading,
+    addRatePlan, 
+    updateRatePlan, 
+    deleteRatePlan,
+    addAPI,
+    updateAPI,
+    deleteAPI
+  } = useSupabaseData();
   const [activeTab, setActiveTab] = useState<'plans' | 'apis'>('plans');
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showAPIModal, setShowAPIModal] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<RatePlan | null>(null);
+  const [editingPlan, setEditingPlan] = useState<any>(null);
   const [editingAPI, setEditingAPI] = useState<API | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Mock data for demonstration
-  const [ratePlans, setRatePlans] = useState<RatePlan[]>([
-    {
-      id: '1',
-      plan_name: 'Police 500',
-      user_type: 'Police',
-      monthly_fee: 500,
-      default_credits: 50,
-      renewal_required: true,
-      topup_allowed: true,
-      apis: [
-        { api_id: '1', enabled: true, credit_cost: 1, buy_price: 6, sell_price: 10 },
-        { api_id: '2', enabled: true, credit_cost: 2, buy_price: 15, sell_price: 20 },
-        { api_id: '3', enabled: false, credit_cost: 0, buy_price: 0, sell_price: 0 }
-      ],
-      created_at: '2025-01-03',
-      status: 'Active'
-    },
-    {
-      id: '2',
-      plan_name: 'Police 1000',
-      user_type: 'Police',
-      monthly_fee: 1000,
-      default_credits: 100,
-      renewal_required: true,
-      topup_allowed: true,
-      apis: [
-        { api_id: '1', enabled: true, credit_cost: 1, buy_price: 6, sell_price: 10 },
-        { api_id: '2', enabled: true, credit_cost: 2, buy_price: 15, sell_price: 20 },
-        { api_id: '3', enabled: true, credit_cost: 0, buy_price: 0, sell_price: 0 }
-      ],
-      created_at: '2025-01-02',
-      status: 'Active'
-    }
-  ]);
-
-  const [apis, setAPIs] = useState<API[]>([
-    {
-      id: '1',
-      name: 'Phone Prefill V2',
-      type: 'PRO',
-      global_buy_price: 6,
-      global_sell_price: 10,
-      default_credit_charge: 1,
-      description: 'Advanced phone number verification and details'
-    },
-    {
-      id: '2',
-      name: 'RC Verification',
-      type: 'PRO',
-      global_buy_price: 15,
-      global_sell_price: 20,
-      default_credit_charge: 2,
-      description: 'Vehicle registration certificate verification'
-    },
-    {
-      id: '3',
-      name: 'OSINT Social Scan',
-      type: 'FREE',
-      global_buy_price: 0,
-      global_sell_price: 0,
-      default_credit_charge: 0,
-      description: 'Open source intelligence social media scanning'
-    },
-    {
-      id: '4',
-      name: 'Cell ID Location',
-      type: 'PRO',
-      global_buy_price: 25,
-      global_sell_price: 30,
-      default_credit_charge: 3,
-      description: 'Cell tower location tracking'
-    },
-    {
-      id: '5',
-      name: 'PAN Verification',
-      type: 'PRO',
-      global_buy_price: 8,
-      global_sell_price: 12,
-      default_credit_charge: 1,
-      description: 'PAN card verification service'
-    }
-  ]);
 
   const [planFormData, setPlanFormData] = useState({
     plan_name: '',
@@ -133,7 +33,7 @@ export const RatePlans: React.FC = () => {
     monthly_fee: 0,
     renewal_required: true,
     topup_allowed: true,
-    apis: [] as PlanAPI[]
+    apis: [] as any[]
   });
 
   const [apiFormData, setAPIFormData] = useState({
@@ -144,6 +44,11 @@ export const RatePlans: React.FC = () => {
     default_credit_charge: 0,
     description: ''
   });
+
+  // Get plan APIs for a specific plan
+  const getPlanAPIs = (planId: string) => {
+    return planAPIs.filter(pa => pa.plan_id === planId);
+  };
 
   const handleCreatePlan = () => {
     const defaultAPIs = apis.map(api => ({
@@ -166,14 +71,14 @@ export const RatePlans: React.FC = () => {
     setShowPlanModal(true);
   };
 
-  const handleEditPlan = (plan: RatePlan) => {
+  const handleEditPlan = (plan: any) => {
     setPlanFormData({
       plan_name: plan.plan_name,
       user_type: plan.user_type,
       monthly_fee: plan.monthly_fee,
       renewal_required: plan.renewal_required,
       topup_allowed: plan.topup_allowed,
-      apis: plan.apis
+      apis: getPlanAPIs(plan.id).map(pa => ({ api_id: pa.api_id, enabled: pa.enabled, credit_cost: pa.credit_cost, buy_price: pa.buy_price, sell_price: pa.sell_price }))
     });
     setEditingPlan(plan);
     setShowPlanModal(true);
@@ -188,31 +93,18 @@ export const RatePlans: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       const defaultCredits = Math.floor(planFormData.monthly_fee / 10);
       
       if (editingPlan) {
-        setRatePlans(prev => prev.map(plan => 
-          plan.id === editingPlan.id 
-            ? {
-                ...plan,
-                ...planFormData,
-                default_credits: defaultCredits
-              }
-            : plan
-        ));
-        toast.success('Plan updated successfully!');
-      } else {
-        const newPlan: RatePlan = {
-          id: Date.now().toString(),
+        await updateRatePlan(editingPlan.id, {
           ...planFormData,
-          default_credits: defaultCredits,
-          created_at: new Date().toISOString().split('T')[0],
-          status: 'Active'
-        };
-        setRatePlans(prev => [...prev, newPlan]);
-        toast.success('Plan created successfully!');
+          default_credits: defaultCredits
+        }, planFormData.apis);
+      } else {
+        await addRatePlan({
+          ...planFormData,
+          default_credits: defaultCredits
+        }, planFormData.apis);
       }
 
       setShowPlanModal(false);
@@ -224,9 +116,8 @@ export const RatePlans: React.FC = () => {
   };
 
   const handleDeletePlan = (planId: string) => {
-    if (window.confirm('Are you sure you want to delete this plan?')) {
-      setRatePlans(prev => prev.filter(plan => plan.id !== planId));
-      toast.success('Plan deleted successfully!');
+    if (window.confirm('Are you sure you want to delete this plan? This will also remove all API configurations for this plan.')) {
+      deleteRatePlan(planId);
     }
   };
 
@@ -265,22 +156,10 @@ export const RatePlans: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       if (editingAPI) {
-        setAPIs(prev => prev.map(api => 
-          api.id === editingAPI.id 
-            ? { ...api, ...apiFormData }
-            : api
-        ));
-        toast.success('API updated successfully!');
+        await updateAPI(editingAPI.id, apiFormData);
       } else {
-        const newAPI: API = {
-          id: Date.now().toString(),
-          ...apiFormData
-        };
-        setAPIs(prev => [...prev, newAPI]);
-        toast.success('API created successfully!');
+        await addAPI(apiFormData);
       }
 
       setShowAPIModal(false);
@@ -292,9 +171,8 @@ export const RatePlans: React.FC = () => {
   };
 
   const handleDeleteAPI = (apiId: string) => {
-    if (window.confirm('Are you sure you want to delete this API?')) {
-      setAPIs(prev => prev.filter(api => api.id !== apiId));
-      toast.success('API deleted successfully!');
+    if (window.confirm('Are you sure you want to delete this API? This will remove it from all plans.')) {
+      deleteAPI(apiId);
     }
   };
 
@@ -316,6 +194,14 @@ export const RatePlans: React.FC = () => {
   const getAPIType = (apiId: string) => {
     return apis.find(api => api.id === apiId)?.type || 'PRO';
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-2 border-cyber-teal border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className={`p-6 space-y-6 min-h-screen ${isDark ? 'bg-crisp-black' : 'bg-soft-white'}`}>
@@ -428,19 +314,19 @@ export const RatePlans: React.FC = () => {
 
                 <div className="mb-4">
                   <p className={`text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Enabled APIs: {plan.apis.filter(api => api.enabled).length} of {plan.apis.length}
+                    Enabled APIs: {getPlanAPIs(plan.id).filter(api => api.enabled).length} of {getPlanAPIs(plan.id).length}
                   </p>
                   <div className={`w-full rounded-full h-2 ${isDark ? 'bg-crisp-black' : 'bg-gray-200'}`}>
                     <div 
                       className="bg-cyber-gradient h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(plan.apis.filter(api => api.enabled).length / plan.apis.length) * 100}%` }}
+                      style={{ width: `${getPlanAPIs(plan.id).length > 0 ? (getPlanAPIs(plan.id).filter(api => api.enabled).length / getPlanAPIs(plan.id).length) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-4 border-t border-cyber-teal/20">
                   <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Created: {plan.created_at}
+                    Created: {new Date(plan.created_at).toLocaleDateString()}
                   </span>
                   <div className="flex space-x-2">
                     <button 
